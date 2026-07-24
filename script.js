@@ -14,7 +14,6 @@ volatilidad.textContent = "--";
 const socket = new WebSocket(
   "wss://ws.derivws.com/websockets/v3?app_id=1089"
 );
-
 // Cuando la conexión se abre
 socket.onopen = function () {
   conectado = true;
