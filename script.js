@@ -11,9 +11,8 @@ tendencia.textContent = "Conectando con Deriv...";
 rsi.textContent = "--";
 volatilidad.textContent = "--";
 
-// Conexión pública para recibir precios
 const socket = new WebSocket(
-  "wss://ws.binaryws.com/websockets/v3"
+    "wss://ws.derivws.com/websockets/v3?app_id=1089"
 );
 
 // Cuando la conexión se abre
