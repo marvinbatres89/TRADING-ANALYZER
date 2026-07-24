@@ -23,13 +23,14 @@ socket.onopen = function () {
     "Conectado. Esperando precios...";
 
   socket.send(
-    JSON.stringify({
-      ticks: "1HZ100V",
-      subscribe: 1
-    })
-  );
-};
-
+  JSON.stringify({
+    ticks: "1HZ100V",
+    subscribe: 1,
+    req_id: 1
+  })
+);
+);
+  
 // Cuando Deriv envía información
 socket.onmessage = function (evento) {
   const datos = JSON.parse(evento.data);
