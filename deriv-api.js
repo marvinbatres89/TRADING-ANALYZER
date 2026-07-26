@@ -1,1 +1,210 @@
-import{CONFIG,MARKETS}from"./config.js";export class DerivAPI{constructor(c={}){this.c=c;this.ws=null;this.connected=false;this.manual=false;this.symbol=CONFIG.defaultSymbol;this.sub=null}connect(){this.manual=false;this.c.status?.("connecting");try{this.ws=new WebSocket(CONFIG.url)}catch(e){this.c.error?.(e.message);return this.retry()}this.ws.onopen=()=>{this.connected=true;this.c.status?.("online");this.c.log?.("Conexión WebSocket abierta.");this.send({active_symbols:"brief",product_type:"basic",req_id:1});this.subscribe(this.symbol);this.heart=setInterval(()=>this.send({ping:1}),CONFIG.heartbeat)};this.ws.onmessage=e=>this.message(e);this.ws.onerror=()=>this.c.error?.("El navegador notificó un error WebSocket.");this.ws.onclose=e=>{this.connected=false;clearInterval(this.heart);this.c.status?.("offline");this.c.log?.(`Conexión cerrada. Código ${e.code||"?"}.`);if(!this.manual)this.retry()}}retry(){clearTimeout(this.timer);this.c.log?.("Reconexión automática programada.");this.timer=setTimeout(()=>this.connect(),CONFIG.reconnect)}send(o){if(this.ws?.readyState===1){this.ws.send(JSON.stringify(o));return true}return false}subscribe(s){this.symbol=s;if(!this.connected)return;if(this.sub)this.send({forget:this.sub});this.sub=null;this.send({ticks:s,subscribe:1,req_id:2});this.c.log?.(`Suscripción solicitada: ${s}`)}reconnect(){this.manual=true;clearTimeout(this.timer);this.ws?.close();setTimeout(()=>this.connect(),250)}message(e){let d;try{d=JSON.parse(e.data)}catch{return this.c.error?.("Respuesta inválida.")}if(d.error)return this.c.error?.(`${d.error.code}: ${d.error.message}`);if(d.msg_type==="active_symbols"){let list=d.active_symbols?.length?d.active_symbols.map(x=>({symbol:x.symbol,name:x.display_name||x.symbol})):MARKETS;this.c.markets?.(list);this.c.log?.(d.active_symbols?.length?`${d.active_symbols.length} mercados recibidos.`:"Lista vacía: usando mercados incorporados.")}if(d.msg_type==="tick"&&d.tick){this.sub=d.subscription?.id||this.sub;this.c.tick?.({symbol:d.tick.symbol,quote:Number(d.tick.quote),epoch:Number(d.tick.epoch),pipSize:Number.isInteger(d.tick.pip_size)?d.tick.pip_size:null})}}}
+import { APP_CONFIG, FALLBACK_MARKETS } from "./config.js";
+
+export class DerivAPI {
+  constructor(callbacks = {}) {
+    this.socket = null;
+    this.callbacks = callbacks;
+    this.currentSymbol = APP_CONFIG.defaultSymbol;
+    this.subscriptionId = null;
+    this.reconnectTimer = null;
+    this.manualClose = false;
+  }
+
+  connect() {
+    this.manualClose = false;
+    clearTimeout(this.reconnectTimer);
+
+    this.callbacks.onStatus?.("connecting");
+    this.callbacks.onLog?.("Intentando conectar con Deriv...");
+
+    try {
+      this.socket = new WebSocket(
+        "wss://ws.binaryws.com/websockets/v3"
+      );
+    } catch (error) {
+      this.callbacks.onError?.(
+        "No se pudo iniciar la conexión: " + error.message
+      );
+      this.scheduleReconnect();
+      return;
+    }
+
+    this.socket.onopen = () => {
+      this.callbacks.onStatus?.("online");
+      this.callbacks.onLog?.(
+        "Conexión con Deriv establecida correctamente."
+      );
+
+      this.requestActiveSymbols();
+      this.subscribeTicks(this.currentSymbol);
+    };
+
+    this.socket.onmessage = (event) => {
+      this.handleMessage(event);
+    };
+
+    this.socket.onerror = () => {
+      this.callbacks.onError?.(
+        "El navegador informó un error de conexión WebSocket."
+      );
+    };
+
+    this.socket.onclose = (event) => {
+      this.callbacks.onStatus?.("offline");
+      this.callbacks.onLog?.(
+        `Conexión cerrada. Código: ${event.code}`
+      );
+
+      if (!this.manualClose) {
+        this.scheduleReconnect();
+      }
+    };
+  }
+
+  send(data) {
+    if (
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      this.callbacks.onError?.(
+        "No se pudo enviar la solicitud porque la conexión no está abierta."
+      );
+      return false;
+    }
+
+    this.socket.send(JSON.stringify(data));
+    return true;
+  }
+
+  requestActiveSymbols() {
+    this.send({
+      active_symbols: "brief",
+      product_type: "basic",
+      req_id: 1
+    });
+  }
+
+  subscribeTicks(symbol) {
+    this.currentSymbol = symbol;
+
+    if (
+      !this.socket ||
+      this.socket.readyState !== WebSocket.OPEN
+    ) {
+      return;
+    }
+
+    if (this.subscriptionId) {
+      this.send({
+        forget: this.subscriptionId
+      });
+
+      this.subscriptionId = null;
+    }
+
+    this.send({
+      ticks: symbol,
+      subscribe: 1,
+      req_id: 2
+    });
+
+    this.callbacks.onLog?.(
+      `Solicitando precios de ${symbol}...`
+    );
+  }
+
+  handleMessage(event) {
+    let data;
+
+    try {
+      data = JSON.parse(event.data);
+    } catch (error) {
+      this.callbacks.onError?.(
+        "Deriv envió una respuesta que no pudo leerse."
+      );
+      return;
+    }
+
+    if (data.error) {
+      this.callbacks.onError?.(
+        `${data.error.code}: ${data.error.message}`
+      );
+      return;
+    }
+
+    if (data.msg_type === "active_symbols") {
+      const markets =
+        Array.isArray(data.active_symbols) &&
+        data.active_symbols.length > 0
+          ? data.active_symbols.map((market) => ({
+              symbol: market.symbol,
+              name:
+                market.display_name ||
+                market.symbol
+            }))
+          : FALLBACK_MARKETS;
+
+      this.callbacks.onMarkets?.(markets);
+
+      this.callbacks.onLog?.(
+        `${markets.length} mercados disponibles.`
+      );
+
+      return;
+    }
+
+    if (
+      data.msg_type === "tick" &&
+      data.tick
+    ) {
+      this.subscriptionId =
+        data.subscription?.id ||
+        this.subscriptionId;
+
+      this.callbacks.onTick?.({
+        symbol: data.tick.symbol,
+        quote: Number(data.tick.quote),
+        epoch: Number(data.tick.epoch),
+        pipSize:
+          Number.isInteger(data.tick.pip_size)
+            ? data.tick.pip_size
+            : null
+      });
+
+      return;
+    }
+
+    if (data.msg_type === "ping") {
+      this.callbacks.onLatency?.(0);
+    }
+  }
+
+  reconnect() {
+    this.disconnect();
+
+    setTimeout(() => {
+      this.connect();
+    }, 500);
+  }
+
+  scheduleReconnect() {
+    clearTimeout(this.reconnectTimer);
+
+    this.callbacks.onLog?.(
+      "Intentando reconectar en 3 segundos..."
+    );
+
+    this.reconnectTimer = setTimeout(() => {
+      this.connect();
+    }, 3000);
+  }
+
+  disconnect() {
+    this.manualClose = true;
+    clearTimeout(this.reconnectTimer);
+
+    if (this.socket) {
+      this.socket.close();
+    }
+  }
+}
