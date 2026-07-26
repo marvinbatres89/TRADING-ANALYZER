@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08111f">
+<title>Trading Analyzer Pro V2.0</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+<header><div><small>PROYECTO FÉNIX</small><h1>Trading Analyzer <span>Pro</span></h1></div><div id="status" class="badge connecting"><i></i><b id="statusText">Conectando…</b></div></header>
+<main>
+<section class="hero">
+<div class="market"><label>Mercado<select id="market"></select></label><button id="reconnect" aria-label="Reconectar">↻</button></div>
+<div class="price"><small>PRECIO EN TIEMPO REAL</small><strong id="price">--</strong><em id="change">Esperando datos…</em></div>
+<canvas id="chart"></canvas>
+<div class="strip"><div><small>Último tick</small><b id="time">--:--:--</b></div><div><small>Datos</small><b id="count">0</b></div><div><small>Latencia</small><b id="latency">-- ms</b></div></div>
+</section>
+<div class="title"><div><small>RESUMEN</small><h2>Estado del análisis</h2></div><button id="analyze">Analizar mercado</button></div>
+<section class="grid">
+<article><span>↗</span><small>TENDENCIA</small><strong id="trend">Esperando</strong><em id="trendHint">Se necesitan más datos</em></article>
+<article><span>◎</span><small>RSI</small><strong id="rsi">--</strong><em id="rsiHint">Periodo 14</em></article>
+<article><span>⚡</span><small>VOLATILIDAD</small><strong id="vol">--</strong><em id="volHint">Calculando</em></article>
+<article><span>🎯</span><small>COINCIDENCIA</small><strong id="confidence">--</strong><div class="bar"><i id="confidenceBar"></i></div><em>No garantiza resultados</em></article>
+</section>
+<section class="decision"><div><div><small>LECTURA ACTUAL</small><h2 id="signal">Esperar datos</h2></div><b id="signalBadge" class="wait">ESPERAR</b></div><p id="explanation">La plataforma necesita recibir suficientes precios antes de generar una lectura técnica.</p></section>
+<section class="log"><details><summary>Diagnóstico de conexión</summary><pre id="log">Iniciando Trading Analyzer Pro V2.0…</pre></details></section>
+<p class="risk">Herramienta educativa de análisis. No ejecuta operaciones ni garantiza resultados.</p>
+</main>
+<nav><button class="active">⌂<small>Inicio</small></button><button disabled>▥<small>Mercados</small></button><button disabled>◉<small>Señales</small></button><button disabled>☰<small>Historial</small></button></nav>
+</div>
+<script type="module" src="js/app.js"></script>
+</body></html>
