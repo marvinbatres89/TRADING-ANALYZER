@@ -1,0 +1,10 @@
+{
+  "name": "Trading Analyzer Pro",
+  "short_name": "Analyzer Pro",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#050a12",
+  "theme_color": "#08111f",
+  "description": "Panel móvil de análisis de mercados con datos en tiempo real.",
+  "icons": []
+}
