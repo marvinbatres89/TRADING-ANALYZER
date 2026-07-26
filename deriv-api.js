@@ -17,10 +17,9 @@ export class DerivAPI {
     this.callbacks.onStatus?.("connecting");
     this.callbacks.onLog?.("Intentando conectar con Deriv...");
 
-    try {
-      this.socket = new WebSocket(
-        "wss://ws.binaryws.com/websockets/v3"
-      );
+    try this.socket = new WebSocket(
+  APP_CONFIG.websocketUrl
+);
     } catch (error) {
       this.callbacks.onError?.(
         "No se pudo iniciar la conexión: " + error.message
